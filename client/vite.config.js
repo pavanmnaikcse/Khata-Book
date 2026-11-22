@@ -37,13 +37,22 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
+      '/ws': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        ws: true,
+      },
+      '/healthz': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
       '/api': {
-        target: 'http://127.0.0.1:3000',
+        target: 'http://localhost:8000',
         changeOrigin: true,
         ws: true,
       },
       '/r': {
-        target: 'http://127.0.0.1:3000',
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
     },

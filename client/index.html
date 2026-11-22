@@ -4907,6 +4907,83 @@
       }
     }
 
+    // ─── Production WebSocket Client (/ws/session) ──────────────────────────
+    function getSessionWebSocketUrl() {
+      const protocol = location.protocol === 'https:' ? 'wss://' : 'ws://';
+      return protocol + location.host + '/ws/session';
+    }
+
+    let sessionWs = null;
+    let wsBackoffMs = 1000;
+    const maxBackoffMs = 30000;
+
+    function setSessionConnectionState(connState, msg = '') {
+      document.querySelectorAll('.sync-pill').forEach((pill) => {
+        const dot = pill.querySelector('.sync-dot');
+        const text = pill.querySelector('.sync-text');
+        if (connState === 'connected') {
+          if (dot) dot.className = 'sync-dot w-2.5 h-2.5 rounded-full bg-[#16A34A]';
+          if (text) text.textContent = msg || 'Live Online';
+        } else if (connState === 'connecting') {
+          if (dot) dot.className = 'sync-dot w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse';
+          if (text) text.textContent = msg || 'Connecting...';
+        } else {
+          if (dot) dot.className = 'sync-dot w-2.5 h-2.5 rounded-full bg-red-500';
+          if (text) text.textContent = msg || 'Reconnecting...';
+        }
+      });
+    }
+
+    function initSessionWebSocket() {
+      if (sessionWs && (sessionWs.readyState === WebSocket.OPEN || sessionWs.readyState === WebSocket.CONNECTING)) {
+        return;
+      }
+      setSessionConnectionState('connecting', 'Connecting...');
+      const targetUrl = getSessionWebSocketUrl();
+
+      try {
+        sessionWs = new WebSocket(targetUrl);
+        sessionWs.onopen = () => {
+          console.log('[VoiceKhata] /ws/session connected at:', targetUrl);
+          wsBackoffMs = 1000;
+          setSessionConnectionState('connected', 'Live Online');
+          sessionWs.send(JSON.stringify({ type: 'session.start' }));
+        };
+        sessionWs.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'ready' || data.status === 'ready') {
+              console.log('[VoiceKhata] Server session ready');
+            }
+          } catch (e) {}
+        };
+        sessionWs.onclose = () => {
+          setSessionConnectionState('disconnected', 'Reconnecting...');
+          setTimeout(initSessionWebSocket, wsBackoffMs);
+          wsBackoffMs = Math.min(wsBackoffMs * 1.5, maxBackoffMs);
+        };
+        sessionWs.onerror = (err) => {
+          console.warn('[VoiceKhata] /ws/session error:', err);
+        };
+      } catch (err) {
+        setSessionConnectionState('disconnected', 'Reconnecting...');
+        setTimeout(initSessionWebSocket, wsBackoffMs);
+        wsBackoffMs = Math.min(wsBackoffMs * 1.5, maxBackoffMs);
+      }
+    }
+
+    // ─── Verify HTTPS / mediaDevices Availability ───────────────────────────
+    function checkMediaDevicesHttps() {
+      if (typeof navigator !== 'undefined' && (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)) {
+        const warnBanner = document.createElement('div');
+        warnBanner.id = 'https-mic-warning-banner';
+        warnBanner.className = 'fixed top-0 left-0 right-0 z-[9999] bg-[#B92B27] text-white font-black text-xs sm:text-sm text-center py-2 px-4 shadow-xl flex items-center justify-center gap-2';
+        warnBanner.innerHTML = '<span>🔒 Voice Recording needs HTTPS: navigator.mediaDevices is unavailable on insecure origins.</span>';
+        document.body.prepend(warnBanner);
+        console.error('[VoiceKhata] needs HTTPS: navigator.mediaDevices is undefined');
+      }
+    }
+
     // Initialize real connection on load
     window.addEventListener('DOMContentLoaded', () => {
       const dateBadge = document.getElementById('desktop-date-badge');
@@ -4918,6 +4995,8 @@
           year: 'numeric',
         });
       }
+      checkMediaDevicesHttps();
+      initSessionWebSocket();
       changeAppLanguage(currentAppLang);
       fetchInitialData();
       fetchKeyStatus();

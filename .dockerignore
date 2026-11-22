@@ -1,0 +1,12 @@
+.env
+.env.*
+*.db
+*.db-wal
+*.db-shm
+data/
+eval/audio
+node_modules
+.git
+__pycache__
+*.pyc
+.vs

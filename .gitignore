@@ -10,3 +10,12 @@ Thumbs.db
 coverage/
 .vs/
 *.wav
+__pycache__/
+*.pyc
+.pytest_cache/
+test_unit_data/
+test_data/
+data/
+*.db
+*.db-wal
+*.db-shm
