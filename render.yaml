@@ -3,16 +3,12 @@ services:
     name: khata
     runtime: docker
     region: singapore
-    plan: starter
+    plan: free
     healthCheckPath: /healthz
     autoDeploy: true
-    disk:
-      name: khata-data
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: DATA_DIR
-        value: /var/data
+        value: /app/data
       - key: USE_MOCKS
         value: "false"
       - key: STT_MODE
@@ -36,6 +32,4 @@ services:
       - key: DB_ENCRYPTION_KEY
         sync: false
       - key: ADMIN_TOKEN
-        sync: false
-      - key: ACCESS_CODE
         sync: false
