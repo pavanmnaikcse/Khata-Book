@@ -90,14 +90,15 @@ app = FastAPI(title="Voice Khata", version="1.0.0", lifespan=lifespan)
 async def security_headers_middleware(request: Request, call_next):
     response = await call_next(request)
 
-    # Content-Security-Policy (self with necessary inline/blob/audio worker support)
+    # Content-Security-Policy (self with necessary inline/blob/audio worker support + Tailwind and fonts)
     response.headers["Content-Security-Policy"] = (
         "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: wss: ws: https:; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.tailwindcss.com https:; "
         "worker-src 'self' blob:; "
         "media-src 'self' blob: data:; "
         "connect-src 'self' wss: ws: https:; "
         "style-src 'self' 'unsafe-inline' https:; "
+        "font-src 'self' https: data:; "
         "img-src 'self' data: blob: https:;"
     )
     # Permissions-Policy: microphone access for PWA speech input
