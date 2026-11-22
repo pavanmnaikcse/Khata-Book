@@ -187,6 +187,34 @@ async def api_customers():
 async def api_transactions():
     return get_all_transactions()
 
+@app.get("/api/sync/pull")
+async def api_sync_pull():
+    return {
+        "customers": get_all_customers(),
+        "transactions": get_all_transactions(),
+        "version": 1
+    }
+
+@app.post("/api/sync/push")
+async def api_sync_push(request: Request):
+    return {"ok": True, "synced": True}
+
+@app.post("/api/sync/delete-all")
+async def api_sync_delete_all():
+    return {"ok": True}
+
+@app.post("/api/voice/extract")
+async def api_voice_extract(request: Request):
+    data = await request.json()
+    text = data.get("transcript", "")
+    # Returns structured fallback
+    return {
+        "intent": "credit",
+        "name": "Customer",
+        "amount": 0,
+        "transcript": text
+    }
+
 # ─── 4. ASSETS MOUNT & STATIC CATCH-ALL ROUTE ───────────────────────────────
 # Mount /assets if the directory exists inside STATIC_DIR
 assets_dir = os.path.join(STATIC_DIR, "assets")
@@ -200,6 +228,9 @@ async def serve_spa_and_static_files(full_path: str):
     - If full_path matches a static file on disk, serve it with proper MIME.
     - Otherwise, returns index.html so client routes refresh cleanly (/gave, /got, /customers/1, /settings).
     """
+    if full_path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="API route not found")
+
     index_file = os.path.join(STATIC_DIR, "index.html")
 
     # If asking for root, return index.html
@@ -214,6 +245,8 @@ async def serve_spa_and_static_files(full_path: str):
         media_type, _ = mimetypes.guess_type(target_file)
         if target_file.endswith(".js") or target_file.endswith(".mjs"):
             media_type = "application/javascript"
+        elif target_file.endswith(".css"):
+            media_type = "text/css"
         return FileResponse(target_file, media_type=media_type)
 
     # For SPA client routes (like /got, /gave, /customers/1, /settings), return index.html
